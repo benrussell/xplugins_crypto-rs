@@ -17,6 +17,7 @@ sha1 = "0.10.5"
 sha2 = "0.10.6"
 # tokio = { version = "1", features = ["full"] }
 libaes = "0.6.4"
+hmac = "0.12.1"
 
 [[example]]
 name = "g64_decrypt"

@@ -1,8 +1,10 @@
 
 use libaes::Cipher;
-//use sha256;
 use sha2;
 use sha2::Digest;
+use hmac::{Hmac, Mac};
+use hex_literal::hex;
+
 
 // File structure should be:
 // G64000
@@ -97,27 +99,46 @@ pub fn decrypt_file( filename: &str, signed_file: bool, password: &str ) -> Resu
     let iv = get_iv(&data);
     //println!("  iv: {:?}", iv);
 
-    let hmac = get_hmac(&data);
-    println!("hmac: {:?}", hmac);
-
-
+    let hmac_bytes = get_hmac(&data);
+    
     if signed_file {
         //println!("Capturing RSA signature.");
         let _rsa_sig = data_blob.split_off( data_blob.len() - 256 );
+
+        //Verify signature..
+        
         //println!("rsa_sig: {:?}", rsa_sig);
     }
 
 
-    const PRINT_BLOB: bool = false;
-    if PRINT_BLOB {
-        //print a hex dump of the data segment
-        println!("AES Payload:");
-        print_hex_blob( &data_blob );
-        println!("");
-    }
-    
-
     let key = get_key_hash(password);
+    
+    let mut data_plus_iv = data_blob.clone();
+    data_plus_iv.append( &mut iv.to_vec() );
+
+    // Create alias for HMAC-SHA256
+    type HmacSha256 = Hmac<sha2::Sha256>;
+
+    let mut hmac = HmacSha256::new_from_slice(&key)
+    .expect("HMAC can take key of any size");
+    hmac.update( &data_plus_iv );
+
+    // `result` has type `CtOutput` which is a thin wrapper around array of
+    // bytes for providing constant time equality check
+    let hmac_result = hmac.finalize();
+    // To get underlying array use `into_bytes`, but be careful, since
+    // incorrect use of the code value may permit timing attacks which defeats
+    // the security provided by the `CtOutput`
+    let code_bytes = hmac_result.into_bytes();
+
+    if code_bytes.to_vec() == hmac_bytes.to_vec() {
+        println!("HMAC is good.");
+    }else{
+        println!("hmac: {:?}", hmac_bytes);
+        println!("comp: {:?}", code_bytes);
+        return Err("HMAC is bad.".to_string());
+    }
+
     let cipher = Cipher::new_128(&key);
     let decrypted = cipher.cbc_decrypt(iv, &data_blob[..]);
     let dec_str = String::from_utf8(decrypted).expect("Unable to convert decrypted data to string.");
