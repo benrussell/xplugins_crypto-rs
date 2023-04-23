@@ -13,14 +13,8 @@ use sha2::Digest;
 
 
 fn get_key_hash( raw_key: &str ) -> [u8; 16]{
-
-    println!("raw key: {}", raw_key);
-
     let hash = sha2::Sha256::digest( raw_key );
     let hash_16 = &hash[0..16];
-
-    println!("   hash: {:x}", hash);
-    println!("hash_16: {:?}", hash_16);
     
     let mut ret: [u8; 16] = [0; 16];
     for i in 0..16{
@@ -28,7 +22,6 @@ fn get_key_hash( raw_key: &str ) -> [u8; 16]{
     }
 
     ret
-
 }
 
 
@@ -51,7 +44,33 @@ fn get_hmac( data: &Vec<u8> ) -> &[u8] {
 }
 
 
-pub fn decrypt_file( filename: &str, signed_file: bool ) -> Result<String, String>{
+fn print_hex_blob( data: &Vec<u8> ){
+    
+    let mut counter_newline = 0;
+    let mut counter_space = 0;
+    
+    for b in data.iter(){
+        print!("{:02x}", b);
+
+        counter_space += 1;
+        if counter_space == 4 {
+            print!(" ");
+            counter_space = 0;
+        }
+
+        counter_newline += 1;
+        if counter_newline >= 36 {
+            println!("");
+            counter_newline = 0;
+            counter_space = 0;
+        }
+        
+    }
+
+}
+
+
+pub fn decrypt_file( filename: &str, signed_file: bool, password: &str ) -> Result<String, String>{
 
     use std::io::Read;
 
@@ -76,73 +95,35 @@ pub fn decrypt_file( filename: &str, signed_file: bool ) -> Result<String, Strin
     println!("Checking header: {:?}", check_header(&data) );
 
     let iv = get_iv(&data);
-    println!("  iv: {:?}", iv);
+    //println!("  iv: {:?}", iv);
 
     let hmac = get_hmac(&data);
     println!("hmac: {:?}", hmac);
 
 
-
     if signed_file {
-        println!("Capturing RSA signature.");
+        //println!("Capturing RSA signature.");
         let _rsa_sig = data_blob.split_off( data_blob.len() - 256 );
-
         //println!("rsa_sig: {:?}", rsa_sig);
     }
 
 
-    const PRINT_BLOB: bool = true;
+    const PRINT_BLOB: bool = false;
     if PRINT_BLOB {
         //print a hex dump of the data segment
         println!("AES Payload:");
-        let mut counter_newline = 0;
-        let mut counter_space = 0;
-        for b in data_blob.iter(){
-            print!("{:02x}", b);
-
-
-            counter_space += 1;
-            if counter_space == 4 {
-                print!(" ");
-                counter_space = 0;
-            }
-
-
-            counter_newline += 1;
-            if counter_newline >= 36 {
-                println!("");
-                counter_newline = 0;
-                counter_space = 0;
-            }
-        
-            
-        }
+        print_hex_blob( &data_blob );
+        println!("");
     }
     
-    println!("");
 
-
-    let readable_password = "good-luck-cracking-rsa-sigs-you-pathetic-idiots";
-
-    let key = get_key_hash(readable_password);
-    for b in key.iter(){
-        print!("{:02x}", b);
-    }
-    println!("");
-
+    let key = get_key_hash(password);
     let cipher = Cipher::new_128(&key);
-
     let decrypted = cipher.cbc_decrypt(iv, &data_blob[..]);
-
-
     let dec_str = String::from_utf8(decrypted).expect("Unable to convert decrypted data to string.");
-    println!("[{}]", dec_str);
-
-    //println!("{:?}", decrypted);
-
-
+    //println!("[{}]", dec_str);
     
-    Ok("no_decrypt".to_string())
+    Ok( dec_str )
 }
 
 
