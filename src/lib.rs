@@ -49,6 +49,39 @@ fn get_hmac( data: &Vec<u8> ) -> &[u8] {
 }
 
 
+
+fn verify_hmac( password_hash: [u8;16], data_blob: &Vec<u8>, iv: &[u8], hmac_bytes: &[u8] ) -> Result<String, String>{
+
+    let mut data_plus_iv = data_blob.clone();
+    data_plus_iv.append( &mut iv.to_vec() );
+
+    // Create alias for HMAC-SHA256
+    type HmacSha256 = Hmac<sha2::Sha256>;
+
+    let mut hmac = HmacSha256::new_from_slice(&password_hash)
+    .expect("HMAC can take key of any size");
+    hmac.update( &data_plus_iv );
+
+    // `result` has type `CtOutput` which is a thin wrapper around array of
+    // bytes for providing constant time equality check
+    let hmac_result = hmac.finalize();
+    // To get underlying array use `into_bytes`, but be careful, since
+    // incorrect use of the code value may permit timing attacks which defeats
+    // the security provided by the `CtOutput`
+    let code_bytes = hmac_result.into_bytes();
+
+    if code_bytes.to_vec() == hmac_bytes.to_vec() {
+        return Ok("HMAC is Good.".to_string());
+    }else{
+        println!("hmac: {:?}", hmac_bytes);
+        println!("comp: {:?}", code_bytes);
+        return Err("HMAC is bad.".to_string());
+    }
+
+}
+
+
+
 pub fn decrypt_file( filename: &str, signed_file: bool, password: &str ) -> Result<String, String>{
 
     use std::io::Read;
@@ -84,34 +117,20 @@ pub fn decrypt_file( filename: &str, signed_file: bool, password: &str ) -> Resu
         //println!("rsa_sig: {:?}", rsa_sig);
     }
 
-
     let password_hash = get_password_hash(password);
     
-    let mut data_plus_iv = data_blob.clone();
-    data_plus_iv.append( &mut iv.to_vec() );
+    let valid_hmac = verify_hmac(
+        password_hash, 
+        &data_blob, 
+        iv, 
+        hmac_bytes
+    );
 
-    // Create alias for HMAC-SHA256
-    type HmacSha256 = Hmac<sha2::Sha256>;
-
-    let mut hmac = HmacSha256::new_from_slice(&password_hash)
-    .expect("HMAC can take key of any size");
-    hmac.update( &data_plus_iv );
-
-    // `result` has type `CtOutput` which is a thin wrapper around array of
-    // bytes for providing constant time equality check
-    let hmac_result = hmac.finalize();
-    // To get underlying array use `into_bytes`, but be careful, since
-    // incorrect use of the code value may permit timing attacks which defeats
-    // the security provided by the `CtOutput`
-    let code_bytes = hmac_result.into_bytes();
-
-    if code_bytes.to_vec() == hmac_bytes.to_vec() {
-        println!("HMAC is good.");
-    }else{
-        println!("hmac: {:?}", hmac_bytes);
-        println!("comp: {:?}", code_bytes);
-        return Err("HMAC is bad.".to_string());
+    match valid_hmac{
+        Ok(_) => println!("HMAC is valid."),
+        Err(msg) => println!("{}", msg),
     }
+
 
     let cipher = Cipher::new_128(&password_hash);
     let decrypted = cipher.cbc_decrypt(iv, &data_blob[..]);
