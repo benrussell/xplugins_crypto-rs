@@ -3,7 +3,10 @@ use libaes::Cipher;
 use sha2;
 use sha2::Digest;
 use hmac::{Hmac, Mac};
-use hex_literal::hex;
+//use hex_literal::hex;
+
+
+pub mod rsa;
 
 
 // File structure should be:
@@ -14,7 +17,7 @@ use hex_literal::hex;
 // 256 byte RSa signature optional
 
 
-fn get_key_hash( raw_key: &str ) -> [u8; 16]{
+fn get_password_hash( raw_key: &str ) -> [u8; 16]{
     let hash = sha2::Sha256::digest( raw_key );
     let hash_16 = &hash[0..16];
     
@@ -43,32 +46,6 @@ fn get_iv( data: &Vec<u8> ) -> &[u8] {
 
 fn get_hmac( data: &Vec<u8> ) -> &[u8] {
     &data[22..54]    
-}
-
-
-fn print_hex_blob( data: &Vec<u8> ){
-    
-    let mut counter_newline = 0;
-    let mut counter_space = 0;
-    
-    for b in data.iter(){
-        print!("{:02x}", b);
-
-        counter_space += 1;
-        if counter_space == 4 {
-            print!(" ");
-            counter_space = 0;
-        }
-
-        counter_newline += 1;
-        if counter_newline >= 36 {
-            println!("");
-            counter_newline = 0;
-            counter_space = 0;
-        }
-        
-    }
-
 }
 
 
@@ -102,16 +79,13 @@ pub fn decrypt_file( filename: &str, signed_file: bool, password: &str ) -> Resu
     let hmac_bytes = get_hmac(&data);
     
     if signed_file {
-        //println!("Capturing RSA signature.");
+        //println!("Stripping RSA signature.");
         let _rsa_sig = data_blob.split_off( data_blob.len() - 256 );
-
-        //Verify signature..
-        
         //println!("rsa_sig: {:?}", rsa_sig);
     }
 
 
-    let key = get_key_hash(password);
+    let password_hash = get_password_hash(password);
     
     let mut data_plus_iv = data_blob.clone();
     data_plus_iv.append( &mut iv.to_vec() );
@@ -119,7 +93,7 @@ pub fn decrypt_file( filename: &str, signed_file: bool, password: &str ) -> Resu
     // Create alias for HMAC-SHA256
     type HmacSha256 = Hmac<sha2::Sha256>;
 
-    let mut hmac = HmacSha256::new_from_slice(&key)
+    let mut hmac = HmacSha256::new_from_slice(&password_hash)
     .expect("HMAC can take key of any size");
     hmac.update( &data_plus_iv );
 
@@ -139,7 +113,7 @@ pub fn decrypt_file( filename: &str, signed_file: bool, password: &str ) -> Resu
         return Err("HMAC is bad.".to_string());
     }
 
-    let cipher = Cipher::new_128(&key);
+    let cipher = Cipher::new_128(&password_hash);
     let decrypted = cipher.cbc_decrypt(iv, &data_blob[..]);
     let dec_str = String::from_utf8(decrypted).expect("Unable to convert decrypted data to string.");
     //println!("[{}]", dec_str);
@@ -148,15 +122,3 @@ pub fn decrypt_file( filename: &str, signed_file: bool, password: &str ) -> Resu
 }
 
 
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
-}
