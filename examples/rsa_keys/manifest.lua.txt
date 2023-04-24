@@ -1,0 +1,16 @@
+{
+    version = 2208160247,
+
+    -- keys = {{name,public.pem_hash},...}
+    keys = {
+        --{"Digital Replica",""},
+        --{"ITXD",""},
+        --{"IXEG",""},
+        --{"Leading Edge Simulations",""},
+        --{"Uncle Jack Simulations",""},
+        {"x-aviation.com","7de47d8efd8ffb40e236d9bda104c2ea6e4adf0f"},
+        {"x-plugins.com","face71ff425a9e0709178de8dad5e000d711e405"},
+        --{"X-Scenery",""  },
+        --{"TOGA",""  },
+    }
+}
