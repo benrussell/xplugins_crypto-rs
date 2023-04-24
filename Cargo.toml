@@ -18,3 +18,6 @@ hmac = "0.12.1"
 
 [[example]]
 name = "g64_decrypt"
+
+[[example]]
+name = "verify_sig"
