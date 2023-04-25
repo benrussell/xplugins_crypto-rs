@@ -8,7 +8,7 @@ fn main() {
     
     let password = "good-luck-cracking-rsa-sigs-you-pathetic-idiots";
     
-    let plain_text = xplugins_crypto::decrypt_file(filename, true, password).expect("Decrypt Failed");
+    let plain_text = xplugins_crypto::g64::decrypt_file(filename, true, password).expect("Decrypt Failed");
 
     println!("plain_text:\n{}", plain_text)
 
