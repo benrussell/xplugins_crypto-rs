@@ -3,16 +3,17 @@ use xplugins_crypto::rsa;
 use std::env;
 
 
-fn main(){
-    let args: Vec<String> = env::args().collect();    
-    println!("argc: {}", args.len());
 
-    //let _filename = &args[1];
-    
-    println!("Verifying file RSA signature...");
+fn print_help(){
+    println!("");
+    println!("verify_sig: Verify RSA signature of a file.");
+    println!("Usage: verify_sig <public.pem> <filename>");
+    println!("");
+}
 
 
-/*     
+
+fn read_file( filename: &str ) -> Vec<u8>{
     use std::io::Read;
 
     let file_open_err = format!("Unable to open source file: {}", filename);
@@ -21,22 +22,33 @@ fn main(){
     let mut data: Vec<u8> = vec!();
     let file_read_err = format!("Unable to read source file: {}", filename);
     fh.read_to_end(&mut data).expect(&file_read_err);
-    println!("read {} bytes of encrypted data.", data.len());
- */
+    drop(fh);
+    
+    data
+}
+
+
+
+fn main(){
+    let args: Vec<String> = env::args().collect();    
+    //println!("argc: {}", args.len());
+
+    if args.len() != 3 {
+        print_help();
+        return;
+    }
 
     
-    //FIXME: PEM file format is not supported.
-
-    //let public_key = include_bytes!("../examples/rsa_keys/x-plugins.com/public.pem");
-    //let public_key = include_bytes!("../examples/rsa_keys/x-aviation.com/public.pem");
-    let public_key = include_bytes!("../examples/rsa_keys/x-aviation.com/public_key.der");
-
-    let mut data_blob = include_bytes!("../examples/data/IPC_data.lua.G64").to_vec();    
-    //let mut data_blob = include_bytes!("../examples/data/license_data.bin").to_vec();    
+    let public_key_pem_fn = &args[1];
+    let public_key = xplugins_crypto::pem::pem_to_der( public_key_pem_fn ).unwrap();
+    
+    let data_fn = &args[2];
+    let mut data_blob = read_file( data_fn );
+    
+    //RSA sig is last 256 bytes of file.
     let rsa_sig = data_blob.split_off( data_blob.len() - 256 );
 
-    println!("Verifying signature for license_data.bin with xa.pem..");
-    let sig_check = rsa::verify_signature(public_key, &rsa_sig, &data_blob);
+    let sig_check = rsa::verify_signature(&public_key, &rsa_sig, &data_blob);
 
     match sig_check{
         Ok( _ ) => {
