@@ -7,6 +7,7 @@ use hmac::{Hmac, Mac};
 
 
 pub mod rsa;
+pub mod pem;
 
 
 // File structure should be:
