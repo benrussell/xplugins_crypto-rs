@@ -76,8 +76,18 @@ fn verify_hmac( password_hash: [u8;16], data_blob: &Vec<u8>, iv: &[u8], hmac_byt
 }
 
 
+pub struct DecryptOptions{
+    pub filename: String,
+    pub password: String,
+    pub signed_file: bool,
+}
 
-pub fn decrypt_file( filename: &str, signed_file: bool, password: &str ) -> Result<String, String>{
+
+pub fn decrypt_file( options: DecryptOptions ) -> Result<Vec<u8>, String>{
+
+    let filename: &str = &options.filename;
+    let password: &str = &options.password;
+    let signed_file: bool = options.signed_file;
 
     use std::io::Read;
 
@@ -129,10 +139,10 @@ pub fn decrypt_file( filename: &str, signed_file: bool, password: &str ) -> Resu
 
     let cipher = Cipher::new_128(&password_hash);
     let decrypted = cipher.cbc_decrypt(iv, &data_blob[..]);
-    let dec_str = String::from_utf8(decrypted).expect("Unable to convert decrypted data to string.");
+    //let dec_str = String::from_utf8(decrypted).expect("Unable to convert decrypted data to string.");
     //println!("[{}]", dec_str);
     
-    Ok( dec_str )
+    Ok( decrypted )
 }
 
 
