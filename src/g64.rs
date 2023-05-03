@@ -133,7 +133,7 @@ pub fn decrypt_file( options: DecryptOptions ) -> Result<Vec<u8>, String>{
 
     match valid_hmac{
         Ok(_) => println!("HMAC is valid."),
-        Err(msg) => println!("{}", msg),
+        Err(msg) => return Err(msg), //FIXME: this should return an error
     }
 
 
