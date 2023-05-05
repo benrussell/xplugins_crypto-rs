@@ -43,12 +43,9 @@ fn main(){
     let public_key = xplugins_crypto::pem::pem_to_der( public_key_pem_fn ).unwrap();
     
     let data_fn = &args[2];
-    let mut data_blob = read_file( data_fn );
+    let data_blob = read_file( data_fn );
     
-    //RSA sig is last 256 bytes of file.
-    let rsa_sig = data_blob.split_off( data_blob.len() - 256 );
-
-    let sig_check = rsa::verify_signature(&public_key, &rsa_sig, &data_blob);
+    let sig_check = rsa::verify_blob_signature(&public_key, data_blob);
 
     match sig_check{
         Ok( _ ) => {

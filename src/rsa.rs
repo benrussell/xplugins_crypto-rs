@@ -13,6 +13,7 @@ impl std::fmt::Display for SignatureError {
 
 impl std::error::Error for SignatureError {}
 
+
 pub fn verify_signature(
     public_key: &[u8],
     signature: &[u8],
@@ -30,5 +31,17 @@ pub fn verify_signature(
         Ok(_) => Ok("Signature verified.".to_string()),
         Err(_e) => Err(Box::new(SignatureError("Invalid Signature.".to_string()))),
     }
+}
+
+
+pub fn verify_blob_signature(
+    public_key: &[u8],
+    mut data_blob: Vec<u8>,
+) -> Result<String, Box<dyn std::error::Error>> {
+
+    let rsa_sig = data_blob.split_off( data_blob.len() - 256 );
+
+    verify_signature(&public_key, &rsa_sig, &data_blob)
+    
 }
 
