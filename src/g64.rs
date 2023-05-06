@@ -97,7 +97,7 @@ pub fn decrypt_file( options: DecryptOptions ) -> Result<Vec<u8>, String>{
     let mut data: Vec<u8> = vec!();
     let file_read_err = format!("Unable to read source file: {}", filename);
     fh.read_to_end(&mut data).expect(&file_read_err);
-    println!("read {} bytes of encrypted data.", data.len());
+    //println!("read {} bytes of encrypted data.", data.len());
 
     const HEADER_LEN_G64: usize = 6;
     const HEADER_LEN_IV: usize = 16;
@@ -109,17 +109,18 @@ pub fn decrypt_file( options: DecryptOptions ) -> Result<Vec<u8>, String>{
     }
 
     let mut data_blob = data.split_off( HEADER_LEN_BLOB );
-    println!("Checking header: {:?}", check_header(&data) );
+    //println!("Checking header: {:?}", check_header(&data) );
 
     let iv = get_iv(&data);
     //println!("  iv: {:?}", iv);
 
     let hmac_bytes = get_hmac(&data);
-    
+    //println!("hmac: {:?}", hmac_bytes);
+
     if signed_file {
         //println!("Stripping RSA signature.");
         let _rsa_sig = data_blob.split_off( data_blob.len() - 256 );
-        //println!("rsa_sig: {:?}", rsa_sig);
+        //println!("rsa_sig: {:?}", _rsa_sig);
     }
 
     let password_hash = get_password_hash(password);
@@ -132,16 +133,18 @@ pub fn decrypt_file( options: DecryptOptions ) -> Result<Vec<u8>, String>{
     );
 
     match valid_hmac{
-        Ok(_) => println!("HMAC is valid."),
+        Ok(_) => {
+            //println!("HMAC is valid.")
+        },
         Err(msg) => return Err(msg), //FIXME: this should return an error
     }
 
-
+    //println!("CBC Decrypt..");
     let cipher = Cipher::new_128(&password_hash);
-    let decrypted = cipher.cbc_decrypt(iv, &data_blob[..]);
-    //let dec_str = String::from_utf8(decrypted).expect("Unable to convert decrypted data to string.");
-    //println!("[{}]", dec_str);
-    
+    let decrypted: Vec<u8> = cipher.cbc_decrypt(iv, &data_blob).into();
+    //println!("CBC Decrypted.");
+
+    //println!("RETURNING");
     Ok( decrypted )
 }
 
