@@ -1,11 +1,8 @@
 
 use base64::{Engine as _, engine::{general_purpose}};
 
-
-
 pub fn pem_to_der( filename: &str ) -> Result<Vec<u8>, String>{
 
-    
     // git will auto-translate line endings inside PEM files
     // so we need code to deal with both forms.
 
@@ -34,10 +31,10 @@ pub fn pem_to_der( filename: &str ) -> Result<Vec<u8>, String>{
             .decode(&data){
                 Ok(bytes) => bytes,
                 Err(msg) => {
-                    //FIXME: Disable data dump on error..
-                    println!("{:?}", data);
-                    println!("");
-                    println!("Base64 Decode Error: {}", msg);
+                    // Disable data dump on error..
+                    //println!("{:?}", data);
+                    //println!("");
+                    //println!("Base64 Decode Error: {}", msg);
                     
                     panic!("{}",msg);
                 }
