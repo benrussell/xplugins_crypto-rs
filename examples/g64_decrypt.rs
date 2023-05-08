@@ -1,18 +1,20 @@
 
-use xplugins_crypto::{self, g64::DecryptOptions};
+
+use xplugins_crypto;
 use std::env;
 
 fn main() {
     let args: Vec<String> = env::args().collect();    
-    
-    let decrypt_options = DecryptOptions{
-        filename: args[1].clone(),
-        password: "good-luck-cracking-rsa-sigs-you-pathetic-idiots".to_string(),
-        signed_file: true,
-    };
 
-    let plain_text = xplugins_crypto::g64::decrypt_file(decrypt_options).expect("Decrypt Failed");
+    let filename = args[1].clone();
+    let signed_file = false;
 
+    let gfile = xplugins_crypto::g64::G64File::from_file(&filename, signed_file).unwrap();
+
+    let password = "good-luck-cracking-rsa-sigs-you-pathetic-idiots";
+
+    let plain_text = gfile.decrypt(password).unwrap();
     println!("plain_text:\n{}", String::from_utf8(plain_text).expect("Invalid UTF-8"));
+
 
 }
