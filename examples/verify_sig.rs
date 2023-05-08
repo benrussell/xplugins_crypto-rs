@@ -40,12 +40,12 @@ fn main(){
 
     
     let public_key_pem_fn = &args[1];
-    let public_key = xplugins_crypto::pem::pem_to_der( public_key_pem_fn ).unwrap();
-    
+    let public_key = rsa::public_key::PublicKey::from_pem_file( public_key_pem_fn ).unwrap();
+
     let data_fn = &args[2];
     let data_blob = read_file( data_fn );
     
-    let sig_check = rsa::verify_blob_signature(&public_key, data_blob);
+    let sig_check = rsa::verify_blob_signature(public_key, data_blob);
 
     match sig_check{
         Ok( _ ) => {

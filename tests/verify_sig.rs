@@ -26,13 +26,13 @@ fn verify_rsa_sig_check(){
     
     let public_key_pem_fn = "./data/rsa_keys/x-aviation.com/public.pem";// &args[1];
     //let public_key_pem_fn = "./data/rsa_keys/x-plugins.com/public.pem";// &args[1];
-    let public_key = xplugins_crypto::pem::pem_to_der( public_key_pem_fn ).unwrap();
+    let public_key = xplugins_crypto::rsa::public_key::PublicKey::from_pem_file( public_key_pem_fn ).unwrap();
     
     // git might be auto-fucking this file data too.
     let data_fn = "./data/license_db.bin"; //&args[2];
     let data_blob = read_file( data_fn );
     
-    let sig_check = rsa::verify_blob_signature(&public_key, data_blob);
+    let sig_check = rsa::verify_blob_signature(public_key, data_blob);
 
     match sig_check{
         Ok( _ ) => {
