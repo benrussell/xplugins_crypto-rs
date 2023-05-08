@@ -2,6 +2,11 @@
 // Use the ring::signature to verify a sha1 signature against a public key
 use ring::signature::{self, UnparsedPublicKey};
 
+
+#[allow(dead_code)]
+pub mod public_key;
+
+
 #[derive(Debug)]
 struct SignatureError(String);
 
@@ -14,14 +19,14 @@ impl std::fmt::Display for SignatureError {
 impl std::error::Error for SignatureError {}
 
 
-pub fn verify_signature(
-    public_key: &[u8],
+pub fn verify_message_signature(
+    public_key: public_key::PublicKey,
     signature: &[u8],
     message: &[u8],
 ) -> Result<String, Box<dyn std::error::Error>> {
     let public_key =
         //UnparsedPublicKey::new(&signature::RSA_PKCS1_2048_8192_SHA256, public_key);
-        UnparsedPublicKey::new(&signature::RSA_PKCS1_2048_8192_SHA1_FOR_LEGACY_USE_ONLY, public_key);
+        UnparsedPublicKey::new(&signature::RSA_PKCS1_2048_8192_SHA1_FOR_LEGACY_USE_ONLY, public_key.data());
 
     let verified = public_key
         .verify(message, signature)
@@ -35,13 +40,15 @@ pub fn verify_signature(
 
 
 pub fn verify_blob_signature(
-    public_key: &[u8],
-    mut data_blob: Vec<u8>,
-) -> Result<String, Box<dyn std::error::Error>> {
+        public_key: public_key::PublicKey,
+        mut data_blob: Vec<u8>,
+        ) -> Result<String, Box<dyn std::error::Error>> {
 
     let rsa_sig = data_blob.split_off( data_blob.len() - 256 );
 
-    verify_signature(&public_key, &rsa_sig, &data_blob)
+    verify_message_signature(public_key, &rsa_sig, &data_blob)
     
 }
+
+
 

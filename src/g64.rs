@@ -171,7 +171,7 @@ impl G64File{
 
 
 
-    pub fn verify_rsa_signature(&self, public_key: &[u8]) -> Result<(),String>{
+    pub fn verify_rsa_signature(&self, public_key: crate::rsa::public_key::PublicKey) -> Result<(),String>{
         let data = self.data.clone();
         match crate::rsa::verify_blob_signature( public_key, data ){
             Ok(_) => Ok(()),
