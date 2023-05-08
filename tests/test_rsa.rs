@@ -29,7 +29,7 @@ fn verify_rsa_sig_check(){
     let public_key = xplugins_crypto::rsa::public_key::PublicKey::from_pem_file( public_key_pem_fn ).unwrap();
     
     // git might be auto-fucking this file data too.
-    let data_fn = "./data/license_db.bin"; //&args[2];
+    let data_fn = "./data/signed_license_db.txt"; //&args[2];
     let data_blob = read_file( data_fn );
     
     let sig_check = rsa::verify_blob_signature(public_key, data_blob);
