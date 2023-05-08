@@ -76,7 +76,13 @@ impl G64File{
     }
 
     pub fn get_payload(&self) -> &[u8]{
-        &self.data[54..]
+        if self.signed_file {
+            //strip the signature!
+            &self.data[ 54.. self.data.len()-256 ]
+
+        }else{
+            &self.data[54..]    
+        }
     }
 
 
@@ -93,7 +99,7 @@ impl G64File{
     }
     
 
-    pub fn verify_hmac(&self, password_hash: [u8;16] ) -> Result<String, String>{
+    pub fn verify_hmac(&self, password_hash: [u8;16] ) -> Result<(), String>{
 
         let mut data_plus_iv = self.get_payload().clone().to_vec();
         data_plus_iv.append( &mut self.get_iv().to_vec() );
@@ -111,13 +117,14 @@ impl G64File{
         // To get underlying array use `into_bytes`, but be careful, since
         // incorrect use of the code value may permit timing attacks which defeats
         // the security provided by the `CtOutput`
-        let code_bytes = hmac_result.into_bytes();
+        let hmac_bytes = hmac_result.into_bytes();
+        let blob_bytes = self.get_hmac();
     
-        if code_bytes.to_vec() == self.get_hmac().to_vec() {
-            return Ok("HMAC passed.".to_string());
+        if hmac_bytes.to_vec() == blob_bytes.to_vec() {
+            return Ok(());
         }else{
             //println!("hmac: {:?}", hmac_bytes);
-            //println!("comp: {:?}", code_bytes);
+            //println!("blob: {:?}", blob_bytes);
             return Err("HMAC failed.".to_string());
         }
     
@@ -131,7 +138,7 @@ impl G64File{
         }
     
         let header = self.get_header_g64();    
-        if header == "G64000".as_bytes().to_vec() {
+        if header != "G64000".as_bytes().to_vec() {
             return Err(format!("Bad header, not a G64 file: {}", self.filename));
         }
     
@@ -157,9 +164,10 @@ impl G64File{
             drop(_rsa_sig);
         }
     
+        //println!("password hash input: [{}]", password);
         let password_hash = self.get_password_hash(password);
-        drop(password); //lose the plaintext version from the stack
-
+        //drop(password); //lose the plaintext version from the stack
+        //println!("password_hash: {:?}", password_hash);
         self.verify_hmac(password_hash)?;
     
         let cipher = Cipher::new_128(&password_hash);
