@@ -20,6 +20,7 @@ pub struct G64File{
 
 impl G64File{
 
+    //FIXME: rename to from_encrypted_file
     pub fn from_file( filename: &str, signed_file: bool ) -> Result<Self,String>{
         use std::io::Read;
     
@@ -45,21 +46,55 @@ impl G64File{
         )  
     }
     
+    
+    //FIXME: need from_encrypted_blob(...) constructor
 
-    fn header_len_g64(&self) -> usize{
-        6
+
+    pub fn from_plaintext_blob( password: &str, data: Vec<u8> ) -> G64File{
+
+        let header_g64 = "G64000".as_bytes();
+
+        let mut header_iv: [u8; 16] = [0;16];
+        rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut header_iv); //FIXME: use a stronger RNG
+
+        let password_hash = G64File::get_password_hash( password );
+        
+        let cipher = Cipher::new_128(&password_hash);
+        let data_encrypted: Vec<u8> = cipher.cbc_encrypt(&header_iv, &data).into();
+        
+        let header_hmac = G64File::generate_hmac(password_hash, &data_encrypted, header_iv);
+
+        let mut blob: Vec<u8> = vec!();
+        blob.extend_from_slice( header_g64 );
+        blob.extend_from_slice( &header_iv );
+        blob.extend_from_slice( &header_hmac );
+        blob.extend_from_slice( &data_encrypted );
+        let blob = blob; //strip mutability
+
+
+        let ret = G64File{
+            data: blob,
+            filename: "plaintext_blob".to_string(),
+            signed_file: false,
+        };
+
+        ret.is_valid_file().unwrap();
+        ret.verify_hmac(password_hash).unwrap();
+
+        ret
+
+
     }
 
-    fn header_len_iv(&self) -> usize{
-        16
-    }
 
-    fn header_len_hmac(&self) -> usize{
-        32
-    }
     
     fn header_len_total(&self) -> usize{
-        self.header_len_g64() + self.header_len_iv() + self.header_len_hmac()
+        const HEADER_LEN_G64 : usize = 6;
+        const HEADER_LEN_IV : usize = 16;
+        const HEADER_LEN_HMAC : usize = 32;
+
+        // self.header_len_g64() + self.header_len_iv() + self.header_len_hmac()
+        HEADER_LEN_G64 + HEADER_LEN_IV + HEADER_LEN_HMAC
     }
 
 
@@ -67,13 +102,16 @@ impl G64File{
         &self.data[0..6]
     }
 
+
     pub fn get_iv(&self) -> &[u8]{
         &self.data[6..22]
     }
 
+
     pub fn get_hmac(&self) -> &[u8]{
         &self.data[22..54]
     }
+
 
     pub fn get_payload(&self) -> &[u8]{
         if self.signed_file {
@@ -86,7 +124,8 @@ impl G64File{
     }
 
 
-    fn get_password_hash(&self, raw_key: &str ) -> [u8; 16]{
+    // static fn
+    fn get_password_hash(raw_key: &str ) -> [u8; 16]{
         let hash = sha2::Sha256::digest( raw_key );
         let hash_16 = &hash[0..16];
         
@@ -99,7 +138,39 @@ impl G64File{
     }
     
 
+    // static fn
+    fn generate_hmac( password_hash: [u8;16], data: &Vec<u8>, iv: [u8; 16]) -> [u8; 32]{
+
+        // hmac wants <data><iv> .... not <iv><data>
+        let mut data = data.clone();
+        let mut iv = iv.clone().to_vec();
+        data.append( &mut iv );
+        let data_plus_iv = data.as_slice();
+
+        // Create alias for HMAC-SHA256
+        type HmacSha256 = Hmac<sha2::Sha256>;
+    
+        let mut hmac = HmacSha256::new_from_slice(&password_hash)
+                        .expect("HMAC can take key of any size"); //FIXME: Weird error message
+        hmac.update( &data_plus_iv );
+    
+        // `result` has type `CtOutput` which is a thin wrapper around array of
+        // bytes for providing constant time equality check
+        let hmac_result = hmac.finalize();
+        // To get underlying array use `into_bytes`, but be careful, since
+        // incorrect use of the code value may permit timing attacks which defeats
+        // the security provided by the `CtOutput`
+        let hmac_bytes: [u8; 32] = hmac_result.into_bytes().into();
+        
+        hmac_bytes
+    
+    }
+
+
+
     pub fn verify_hmac(&self, password_hash: [u8;16] ) -> Result<(), String>{
+
+        //FIXME: use generate_hmac to avoid code duplication
 
         let mut data_plus_iv = self.get_payload().clone().to_vec();
         data_plus_iv.append( &mut self.get_iv().to_vec() );
@@ -108,7 +179,7 @@ impl G64File{
         type HmacSha256 = Hmac<sha2::Sha256>;
     
         let mut hmac = HmacSha256::new_from_slice(&password_hash)
-                        .expect("HMAC can take key of any size");
+                        .expect("HMAC can take key of any size"); //FIXME: Weird error message
         hmac.update( &data_plus_iv );
     
         // `result` has type `CtOutput` which is a thin wrapper around array of
@@ -131,7 +202,7 @@ impl G64File{
     }
 
 
-    fn is_valid_file(&self) -> Result<(),String>{
+    pub fn is_valid_file(&self) -> Result<(),String>{
 
         if self.data.len() < self.header_len_total() {
             return Err(format!("File is too small to be a G64 file: {}", self.filename));
@@ -165,7 +236,7 @@ impl G64File{
         }
     
         //println!("password hash input: [{}]", password);
-        let password_hash = self.get_password_hash(password);
+        let password_hash = G64File::get_password_hash(password);
         //drop(password); //lose the plaintext version from the stack
         //println!("password_hash: {:?}", password_hash);
         self.verify_hmac(password_hash)?;

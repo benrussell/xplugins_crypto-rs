@@ -109,3 +109,22 @@ fn test_activation_login_data_decrypt(){
     assert!( data.is_ok() );
 
 }
+
+
+
+#[test]
+fn test_encrypt_plaintext_blob(){
+
+    let password = "secret";
+    let data = "hello world".as_bytes().to_vec();
+
+    let gfile = g64::G64File::from_plaintext_blob( password, data );
+
+    assert!( gfile.is_valid_file().is_ok());
+
+    let recycle = gfile.decrypt(password).unwrap();
+    // println!( "recycle:{}", String::from_utf8(recycle).unwrap() );
+    println!( "recycle:{:?}", recycle );
+    println!( "payload:{:?}", gfile.get_payload() );
+
+}
