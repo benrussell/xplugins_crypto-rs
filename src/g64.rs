@@ -1,4 +1,5 @@
 
+
 use libaes::Cipher;
 use sha2;
 use sha2::Digest;
@@ -20,7 +21,7 @@ pub struct G64File{
 
 impl G64File{
 
-    //FIXME: rename to from_encrypted_file
+    //FIXME: rename to: from_encrypted_file
     pub fn from_file( filename: &str, signed_file: bool ) -> Result<Self,String>{
         use std::io::Read;
     
@@ -85,6 +86,23 @@ impl G64File{
 
 
     }
+
+
+
+    pub fn save_to_file(&self, filename: &str) -> Result<(),String>{
+        
+        let mut file = match std::fs::File::create(&filename) {
+            Err(why) => panic!("couldn't create {}: {}", filename, why),
+            Ok(file) => file,
+        };
+
+        match std::io::Write::write_all(&mut file, self.data.as_slice()){
+            Ok(_) => Ok(()),
+            Err(_) => return Err("write failed".to_string()),
+        }
+
+    }
+
 
 
     

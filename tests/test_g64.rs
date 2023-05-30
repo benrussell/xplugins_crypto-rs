@@ -116,7 +116,7 @@ fn test_activation_login_data_decrypt(){
 fn test_encrypt_plaintext_blob(){
 
     let password = "secret";
-    let data = "hello world".as_bytes().to_vec();
+    let data = "hello world encryption life cycle test".as_bytes().to_vec();
 
     let gfile = g64::G64File::from_plaintext_blob( password, data );
 
@@ -126,5 +126,16 @@ fn test_encrypt_plaintext_blob(){
     // println!( "recycle:{}", String::from_utf8(recycle).unwrap() );
     println!( "recycle:{:?}", recycle );
     println!( "payload:{:?}", gfile.get_payload() );
+
+    let filename = "./data/encrypted_hello_world.bin";
+    println!("saving to disk: {}", filename );
+
+    gfile.save_to_file( filename ).unwrap();
+    drop(gfile);
+
+
+    let gfile = g64::G64File::from_file( filename, false ).unwrap();
+    let decrypted_from_disk = gfile.decrypt(password).unwrap();
+    println!("decryted from disk: [{}]", String::from_utf8(decrypted_from_disk).unwrap());
 
 }
