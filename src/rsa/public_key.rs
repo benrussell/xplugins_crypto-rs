@@ -92,7 +92,7 @@ impl PublicKey{
             Err(_) => return Err(format!("{}", file_read_err)),
         }
         drop(fh);
-        println!("read {} bytes of pem data.", data.len());
+        // println!("read {} bytes of pem data.", data.len());
 
         Ok(data)
     }

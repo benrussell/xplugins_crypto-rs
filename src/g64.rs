@@ -22,6 +22,7 @@ pub struct G64File{
 impl G64File{
 
     //FIXME: rename to: from_encrypted_file
+    //FIXME: change usage so we have load_from_signed_file(...) instead of taking a param
     pub fn from_file( filename: &str, signed_file: bool ) -> Result<Self,String>{
         use std::io::Read;
     
